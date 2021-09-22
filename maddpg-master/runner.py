@@ -35,18 +35,24 @@ class Runner:
             if time_step % self.episode_limit == 0:
                 s = self.env.reset()
             u = []
+
+            #Generation new actions based on observations
             actions = []
             with torch.no_grad():
                 for agent_id, agent in enumerate(self.agents):
+                    #goes to select action in maddpg agent class
                     action = agent.select_action(s[agent_id], self.noise, self.epsilon)
                     u.append(action)
                     actions.append(action)
             for i in range(self.args.n_agents, self.args.n_players):
                 actions.append([0, np.random.rand() * 2 - 1, 0, np.random.rand() * 2 - 1, 0])
-            print("????????????")
             print(self.env)
+
+            #Calls the multi-agent environment for the next steps
             s_next, r, done, info = self.env.step(actions)
             self.buffer.store_episode(s[:self.args.n_agents], u, r[:self.args.n_agents], s_next[:self.args.n_agents])
+
+            #the next observation replaces the previous observation
             s = s_next
             if self.buffer.current_size >= self.args.batch_size:
                 transitions = self.buffer.sample(self.args.batch_size)

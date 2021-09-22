@@ -119,11 +119,6 @@ class Scenario(BaseScenario):
     def charging_station_reward(self, agent, world):
         return 0
         
-    def step(self, actions):
-        print("actions was callled!!!!!!")
-        print(actions)
-        print("!#!#!#!#!#!#!#!#!")
-        pass
 
     def observation(self, agent, world):
         for landmark in world.landmarks:
@@ -135,9 +130,7 @@ class Scenario(BaseScenario):
             if agent.name == "Charging_Station":
                 return([agent.rate, agent.required, self.load])
             elif agent.name  == "Smart_Building":
-                print("~~~~~~~~")
                 print(agent.state.c)
-                print("~~~~~~~~")
                 self.load+= agent.energy
                 return([agent.energy, agent.comfort, self.load])
 

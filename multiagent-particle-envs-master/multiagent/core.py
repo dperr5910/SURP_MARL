@@ -115,7 +115,6 @@ class World(object):
 
     # update state of the world
     def step(self):
-        print("called!!!!!!!!!!!!!!!!")
         # set actions for scripted agents 
         for agent in self.scripted_agents:
             agent.action = agent.action_callback(agent, self)
@@ -169,6 +168,7 @@ class World(object):
                                                                   np.square(entity.state.p_vel[1])) * entity.max_speed
             entity.state.p_pos += entity.state.p_vel * self.dt
 
+    #changes state action to the state communication
     def update_agent_state(self, agent):
         # set communication state (directly for now)
         if agent.silent:
@@ -178,7 +178,7 @@ class World(object):
             print(agent.name)
             print(type(agent.action.c))
             print(agent.action.c)
-            #agent.state.c = agent.action.c + noise      
+            agent.state.c = agent.action.c #+ noise      
 
     # get collision forces for any contact between two entities
     def get_collision_force(self, entity_a, entity_b):
