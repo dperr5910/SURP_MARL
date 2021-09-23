@@ -13,15 +13,17 @@ class Scenario(BaseScenario):
         num_agents = 2
         num_adversaries = 0
 
-        world.dim_c = 3
-        #world.dim_p = None
+        world.dim_c = 1
+        world.dim_p = 2
         world.collaborative = True
 
         self.load = 0
-        self.peak = 500
+        self.peak = 10
         self.energy_costs = []
         self.comfort = 0
         self.occupied = True
+        self.done = False
+        self.time = 0
         
         #Generate Agents
         world.agents = [Agent() for i in range(2)]
@@ -31,6 +33,7 @@ class Scenario(BaseScenario):
                 agent.name = 'Smart_Building'
             elif i == 1:
                 agent.name = "Charging_Station"
+            agent.silent = False
             agent.movable = False
             agent.size = .1
         
@@ -70,18 +73,21 @@ class Scenario(BaseScenario):
 
 
     def reset_world(self, world):
+        self.load = 0
+        self.comfort = 0
+        self.done = False
         world.energy_costs = []
         #filling out agent detail
         for agent in world.agents:
             if agent.name == "Smart_Building":
-                agent.energy = 1
+                agent.energy = 0
                 agent.comfort = 10 
                 agent.color = np.array([0.5,0.5,0.5])
                 agent.state.p_pos = np.array([-.2,0.2])
                 agent.agent_callback = None
                 pass
             elif agent.name == "Charging_Station":
-                agent.rate = 4
+                agent.rate = 0
                 agent.occupied = True
                 agent.required = 72
                 agent.state.p_pos = np.array([-.0,0.2])
@@ -89,6 +95,7 @@ class Scenario(BaseScenario):
                 agent.agent_callback = None 
                 pass
             agent.state.c = np.zeros(world.dim_c)
+            agent.action.c = np.zeros(world.dim_c)
             pass
 
         #filling out landmark detail
@@ -108,34 +115,61 @@ class Scenario(BaseScenario):
 
     def smart_building_reward(self, agent, world):
         reward = 0
-        self.comfort = agent.state.c[1] * 50
+        
         if self.occupied:
             reward += self.comfort
-        self.load = 50 - agent.state.c[2]
+        
         reward -= self.load
 
         return reward
 
     def charging_station_reward(self, agent, world):
-        return 0
+        if agent.required == 0:
+            return 100
+        return -(agent.rate*4+(agent.required))
         
 
     def observation(self, agent, world):
+        print("LOAD")
+        print(self.load)
+        print("LOAD")
         for landmark in world.landmarks:
             if landmark.name == "Load":
-                landmark.color = np.array([0.1+self.load/self.peak/0.9, 1-self.load/self.peak,0])
+                landmark.size = .1 * abs(self.load) + .1
+                landmark.color = np.array([0.1+(self.load/self.peak/0.9), 1-(self.load/self.peak),0])
+                #landmark.color = np.array([1,0,0])
+            elif landmark.name == "comfort":
+                landmark.size = self.comfort + .1
+
+        if agent.name == "Charging_Station":
+            self.load -= agent.rate
+            agent.rate= agent.state.c[0]* 5
+            if agent.required < 0:
+                agent.required = 0
+            elif agent.required > 0 and agent.rate > agent.required:
+                agent.required = 0
+            elif agent.required > 0 and agent.required > agent.rate:
+                agent.required -= agent.rate
+            self.load += agent.rate
+            print("~~~~~~~~~")
+            print(agent.state.c)
+            print(agent.rate)
+            print(agent.required)
+            print("~~~~~~~~~")
+            return([agent.rate, agent.required, self.load])
+        elif agent.name  == "Smart_Building":
+            print("energy")
+            print(agent.energy)
+            self.load -= agent.energy
+            agent.energy = agent.state.c[0] * self.peak/2
+            self.load += agent.energy
+            self.comfort = agent.energy * agent.comfort
+            return([agent.energy, agent.comfort, self.load])
+        
 
 
-        for agent in world.agents:
-            if agent.name == "Charging_Station":
-                return([agent.rate, agent.required, self.load])
-            elif agent.name  == "Smart_Building":
-                print(agent.state.c)
-                self.load+= agent.energy
-                return([agent.energy, agent.comfort, self.load])
 
-        return [0,0,0]
-
+        
     def smart_buildings(self, agent, world):
         return [agent for agent in world.agents if (agent.name == "Smart_Building")]
 

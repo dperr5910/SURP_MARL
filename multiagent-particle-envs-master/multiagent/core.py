@@ -178,6 +178,7 @@ class World(object):
             print(agent.name)
             print(type(agent.action.c))
             print(agent.action.c)
+            #only place where the action.c variable is used
             agent.state.c = agent.action.c #+ noise      
 
     # get collision forces for any contact between two entities
