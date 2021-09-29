@@ -175,9 +175,6 @@ class World(object):
             agent.state.c = np.zeros(self.dim_c)
         else:
             noise = np.random.randn(*agent.action.c.shape) * agent.c_noise if agent.c_noise else 0.0
-            print(agent.name)
-            print(type(agent.action.c))
-            print(agent.action.c)
             #only place where the action.c variable is used
             agent.state.c = agent.action.c #+ noise      
 

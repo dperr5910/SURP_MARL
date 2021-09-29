@@ -29,13 +29,12 @@ class Runner:
 
     def run(self):
         returns = []
-        print(self.args)
         self.args.evaluate_rate=24
         self.args.time_steps = 24*150
         for time_step in tqdm(range(self.args.time_steps)):
             self.env.render()
             # reset the environment
-            self.episode_limit = 24
+            self.episode_limit = 48
             if time_step % self.episode_limit == 0:
                 s = self.env.reset()
             u = []
@@ -50,7 +49,6 @@ class Runner:
                     actions.append(action)
             for i in range(self.args.n_agents, self.args.n_players):
                 actions.append([0, np.random.rand() * 2 - 1, 0, np.random.rand() * 2 - 1, 0])
-            print(self.env)
             self.env.render()
             #Calls the multi-agent environment for the next steps
             s_next, r, done, info = self.env.step(actions)

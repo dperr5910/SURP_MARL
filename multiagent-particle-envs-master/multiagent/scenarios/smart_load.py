@@ -1,7 +1,8 @@
 import numpy as np
 from multiagent.core import World, Agent, Landmark
 from multiagent.scenario import BaseScenario
-
+import random
+import matplotlib.pyplot as plt
 
 
 
@@ -12,13 +13,13 @@ class Scenario(BaseScenario):
         #Scenario Properties
         num_agents = 2
         num_adversaries = 0
-
+        self.states = [[],[]]
         world.dim_c = 1
         world.dim_p = 2
         world.collaborative = True
 
         self.load = 0
-        self.peak = 10
+        self.peak = 5
         self.energy_costs = []
         self.comfort = 0
         self.occupied = True
@@ -119,29 +120,33 @@ class Scenario(BaseScenario):
         if self.occupied:
             reward += self.comfort
         
+        reward -= agent.energy
         reward -= self.load
-
         return reward
 
     def charging_station_reward(self, agent, world):
+        reward = 0
         if agent.required == 0:
-            return 100
-        return -(agent.rate*4+(agent.required))
+            reward = 100 - agent.rate*10
+        else:
+            reward = -(agent.rate*2+(agent.required))
+        return reward - self.load
         
 
     def observation(self, agent, world):
-        print("LOAD")
+        print("Observe - " + agent.name)
         print(self.load)
-        print("LOAD")
         for landmark in world.landmarks:
             if landmark.name == "Load":
-                landmark.size = .1 * abs(self.load) + .1
+                print(landmark.name)
+                landmark.size = max(.1,min((1/self.peak * self.load),1))
                 landmark.color = np.array([0.1+(self.load/self.peak/0.9), 1-(self.load/self.peak),0])
                 #landmark.color = np.array([1,0,0])
             elif landmark.name == "comfort":
-                landmark.size = self.comfort + .1
+                landmark.size = .2 #self.comfort + .1
 
         if agent.name == "Charging_Station":
+            self.states[0].append(agent.state.c)
             self.load -= agent.rate
             agent.rate= agent.state.c[0]* 5
             if agent.required < 0:
@@ -151,15 +156,9 @@ class Scenario(BaseScenario):
             elif agent.required > 0 and agent.required > agent.rate:
                 agent.required -= agent.rate
             self.load += agent.rate
-            print("~~~~~~~~~")
-            print(agent.state.c)
-            print(agent.rate)
-            print(agent.required)
-            print("~~~~~~~~~")
             return([agent.rate, agent.required, self.load])
         elif agent.name  == "Smart_Building":
-            print("energy")
-            print(agent.energy)
+            self.states[1].append(agent.state.c)
             self.load -= agent.energy
             agent.energy = agent.state.c[0] * self.peak/2
             self.load += agent.energy
