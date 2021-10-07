@@ -158,6 +158,7 @@ class Scenario(BaseScenario):
 
         
     def smart_building_reward(self, agent, world):
+        '''
         reward = 0
         
         if self.occupied:
@@ -165,15 +166,20 @@ class Scenario(BaseScenario):
         
         reward -= agent.energy
         reward -= max(self.load, 0)
+        '''
+        reward = -self.energy_cost[self.time]* max(agent.energy, 0) - agent.dependency*((agent.max - agent.energy)**2)
         return reward
 
     def charging_station_reward(self, agent, world):
+        '''
         reward = 0
         if agent.required == 0:
             reward = 100 - agent.rate*10
         else:
             reward = -(agent.rate*2+(agent.required))
-        return reward - max(self.load, 0)
+        '''
+        reward = -self.energy_cost[self.time] - agent.confidence*((agent.required - agent.total)**2)
+        return reward
 
     def random_data(self):
             df = pd.read_csv(self.data_path)
