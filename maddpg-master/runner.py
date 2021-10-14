@@ -29,12 +29,14 @@ class Runner:
 
     def run(self):
         returns = []
-        self.args.evaluate_rate=24
+        self.args.evaluate_rate=23
         self.args.time_steps = 24*150
         for time_step in tqdm(range(self.args.time_steps)):
+            print("Time")
+            print(time_step)
             self.env.render()
             # reset the environment
-            self.episode_limit = 48
+            self.episode_limit = 20
             if time_step % self.episode_limit == 0:
                 s = self.env.reset()
             u = []

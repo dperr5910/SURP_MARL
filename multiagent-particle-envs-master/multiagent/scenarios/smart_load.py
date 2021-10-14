@@ -18,13 +18,13 @@ class Scenario(BaseScenario):
         world.dim_p = 2
         world.collaborative = True
         self.data_path = r'C:\Users\perry\Documents\SURP_research\DEEPQ_SURP\PJME_hourly.csv'
-        self.energy_costs = [1,1,1,2,2,3,4,5,6,7,7,7,10,10,10,10,9,8,8,8,4,3,3,2]
+        self.energy_costs = [1,1,1,2,2,3,4,5,6,7,7,7,10,10,10,10,9,8,8,8,4,3,3,2,2]
         #self.random_data()
         self.load = 0
         self.peak = 20
         self.comfort = 0
         self.occupied = True
-        self.occupation = [0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0]
+        self.occupation = [0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0]
         self.done = False
         self.time = 0
         
@@ -76,8 +76,9 @@ class Scenario(BaseScenario):
 
 
     def reset_world(self, world):
+        print("RESSST")
         self.load = 0
-        self.comfort = 0
+        self.time = 0
         self.done = False
         world.energy_costs = []
 
@@ -90,14 +91,19 @@ class Scenario(BaseScenario):
                 agent.color = np.array([0.5,0.5,0.5])
                 agent.state.p_pos = np.array([-.2,0.2])
                 agent.agent_callback = None
+                agent.max = 10
+                agent.dependency = .5
                 pass
             elif agent.name == "Charging_Station":
+                agent.total = 0
+                agent.energy = 0
                 agent.rate = 0
                 agent.occupied = True
                 agent.required = 72
                 agent.state.p_pos = np.array([-.0,0.2])
                 agent.color = np.array([0.8,0.5,0.8])
                 agent.agent_callback = None 
+                agent.confidence = 0.5
                 pass
             agent.state.c = np.zeros(world.dim_c)
             agent.action.c = np.zeros(world.dim_c)
@@ -125,6 +131,9 @@ class Scenario(BaseScenario):
     def observation(self, agent, world):
         print("Observe - " + agent.name)
         print(self.load)
+        self.time += 1
+        self.time %= 48
+
         for landmark in world.landmarks:
             if landmark.name == "Load":
                 print(landmark.name)
@@ -135,28 +144,31 @@ class Scenario(BaseScenario):
                 landmark.size = .2 #self.comfort + .1
 
         if agent.name == "Charging_Station":
-            self.states[0].append(agent.state.c)
+            #self.states[0].append(agent.state.c)
+            agent.total = max(agent.rate+agent.total, agent.required)
             self.load -= agent.energy
             agent.rate= agent.state.c[0]* 5
-            agent.energy = agent.rate * self.energy_cost[self.time]
-            if agent.required < 0:
-                agent.required = 0
-            elif agent.required > 0 and agent.rate > agent.required:
-                agent.required = 0
-            elif agent.required > 0 and agent.required > agent.rate:
-                agent.required -= agent.rate
+            print(self.time//2)
+            agent.energy = agent.rate * self.energy_costs[self.time//2]
             self.load += agent.energy
             return([agent.rate, agent.required, self.load])
         elif agent.name  == "Smart_Building":
-            self.time += 1
-            self.states[1].append(agent.state.c)
+            #self.states[1].append(agent.state.c)
             self.load -= agent.energy
-            agent.energy = agent.state.c[0] * self.energy_cost[self.time]
+            agent.energy = agent.state.c[0] * self.peak
             self.load += agent.energy
-            self.comfort = agent.energy * agent.comfort
+
             return([agent.energy, agent.comfort, self.load])
 
+
+    def done(self,agent, world):
+        if world.time == 48:
+            return True
+        else:
+            return False
         
+
+    #Reward functions used from 
     def smart_building_reward(self, agent, world):
         '''
         reward = 0
@@ -167,7 +179,16 @@ class Scenario(BaseScenario):
         reward -= agent.energy
         reward -= max(self.load, 0)
         '''
-        reward = -self.energy_cost[self.time]* max(agent.energy, 0) - agent.dependency*((agent.max - agent.energy)**2)
+        print(self.time//2)
+        if self.occupation[self.time//2] == 1:
+            reward = -self.energy_costs[self.time//2]* max(agent.energy, 0) - agent.dependency*((self.peak - agent.energy)**2)
+        else:
+            reward = -self.energy_costs[self.time//2]* max(agent.energy, 0)
+        
+        if self.load>self.peak:
+            reward -5000
+        else:
+            reward += self.peak - self.load * 100
         return reward
 
     def charging_station_reward(self, agent, world):
@@ -178,7 +199,11 @@ class Scenario(BaseScenario):
         else:
             reward = -(agent.rate*2+(agent.required))
         '''
-        reward = -self.energy_cost[self.time] - agent.confidence*((agent.required - agent.total)**2)
+        reward = -self.energy_costs[self.time//2]*agent.rate - agent.confidence*((agent.required - agent.total)**2)
+        if self.load>self.peak:
+            reward -5000
+        else:
+            reward += self.peak - self.load * 100
         return reward
 
     def random_data(self):
