@@ -21,12 +21,13 @@ class Scenario(BaseScenario):
         self.energy_costs = [1,1,1,2,2,3,4,5,6,7,7,7,10,10,10,10,9,8,8,8,4,3,3,2,2]
         #self.random_data()
         self.load = 0
-        self.peak = 20
+        self.peak = 5
         self.comfort = 0
         self.occupied = True
         self.occupation = [0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0]
         self.done = False
         self.time = 0
+        self.car_time = (8,16)
         
         #Generate Agents
         world.agents = [Agent() for i in range(2)]
@@ -130,8 +131,6 @@ class Scenario(BaseScenario):
     Obs - should be returning multiple 
     '''
     def observation(self, agent, world):
-        print("Observe - " + agent.name)
-        print(self.load)
         self.time += 1
         self.time %= 48
 
@@ -147,20 +146,22 @@ class Scenario(BaseScenario):
         if agent.name == "Charging_Station":
             #self.states[0].append(agent.state.c)
             agent.total = max(agent.rate+agent.total, agent.required)
-            self.load -= agent.energy
-            agent.rate= agent.state.c[0]* 5
+            self.load -= agent.rate
+            agent.rate= agent.state.c[0]* agent.required
             print(self.time//2)
             agent.energy = agent.rate * self.energy_costs[self.time//2]
-            self.load += agent.energy
+            self.load += agent.rate
             return([agent.energy, self.load])
         elif agent.name  == "Smart_Building":
             #self.states[1].append(agent.state.c)
             self.load -= agent.energy
-            agent.energy = agent.state.c[0] * self.peak
-            agent.comfort = agent.energy*agent.comfort_coef
+            agent.energy = agent.state.c[0] * agent.max
             self.load += agent.energy
             #energy and comfort not really needed
             return([agent.energy, self.load])
+        assert(self.load >=0 )
+        print(self.load)
+
 
 
     def done(self,agent, world):
@@ -183,7 +184,7 @@ class Scenario(BaseScenario):
         '''
         print(self.time//2)
         if self.occupation[self.time//2] == 1:
-            reward = -self.energy_costs[self.time//2]* max(agent.energy, 0) + agent.comfort_coef*((self.peak - agent.energy)**2)
+            reward = -self.energy_costs[self.time//2]* max(agent.energy, 0) - agent.comfort_coef*((self.peak - agent.energy)**2)
         else:
             reward = -self.energy_costs[self.time//2]* max(agent.energy, 0)
         
@@ -206,7 +207,10 @@ class Scenario(BaseScenario):
             reward -5000
         else:
             reward += - self.load * 100
-        return reward
+        if self.time//2 >= self.car_time[0] and self.time//2 <= self.car_time[1]:
+            return reward
+        else:
+            return 0
 
     def random_data(self):
             df = pd.read_csv(self.data_path)
