@@ -8,6 +8,9 @@ import pandas as pd
 
 
 class Scenario(BaseScenario):
+    def __init__(self):
+        self.day_reward = False
+        self.method = "main"
     def make_world(self):
         world = World()
 
@@ -28,6 +31,7 @@ class Scenario(BaseScenario):
         self.done = False
         self.time = 0
         self.car_time = (8,16)
+        self.day_reward = False
         
         #Generate Agents
         world.agents = [Agent() for i in range(2)]
@@ -66,13 +70,23 @@ class Scenario(BaseScenario):
 
     #reward method for calling. Deliberates to specific reward functions
     def reward(self, agent, world):
+        reward = 0
+
+
         if agent.name == "Smart_Building":
-            return self.smart_building_reward(agent, world)
+            reward = self.smart_building_reward(agent, world)
         elif agent.name == "Charging_Station":
-            return self.charging_station_reward(agent, world)
-        
+            reward = self.charging_station_reward(agent, world)
+
+
+        if (self.day_reward == False):
+            return reward
+        elif(self.day_reward == True and self.time//2 == 24):
+            return self.total_reward
+        elif(self.day_reward == True and self.time//2 != 24):
+            self.total_reward += reward
+
         return None
-        pass
 
 
 
@@ -87,6 +101,8 @@ class Scenario(BaseScenario):
         #filling out agent detail
         for agent in world.agents:
             if agent.name == "Smart_Building":
+                agent.min = 1
+                agent.prev_energy = 0
                 agent.energy = 0
                 #agent.comfort = 10 
                 agent.color = np.array([0.5,0.5,0.5])
@@ -96,6 +112,7 @@ class Scenario(BaseScenario):
                 agent.comfort_coef = .5
                 pass
             elif agent.name == "Charging_Station":
+                agent.prev_energy = 0
                 agent.total = 0
                 agent.energy = 0
                 agent.rate = 0
@@ -131,9 +148,11 @@ class Scenario(BaseScenario):
     Obs - should be returning multiple 
     '''
     def observation(self, agent, world):
+        agent.prev_energy = agent.energy
         self.time += 1
         self.time %= 48
-
+        if (self.method != "main"):
+            return self.rule(agent, world)
         for landmark in world.landmarks:
             if landmark.name == "Load":
                 print(landmark.name)
@@ -148,7 +167,6 @@ class Scenario(BaseScenario):
             agent.total = max(agent.rate+agent.total, agent.required)
             self.load -= agent.rate
             agent.rate= agent.state.c[0]* agent.required
-            print(self.time//2)
             agent.energy = agent.rate * self.energy_costs[self.time//2]
             self.load += agent.rate
             return([agent.energy, self.load])
@@ -160,7 +178,6 @@ class Scenario(BaseScenario):
             #energy and comfort not really needed
             return([agent.energy, self.load])
         assert(self.load >=0 )
-        print(self.load)
 
 
 
@@ -173,38 +190,25 @@ class Scenario(BaseScenario):
 
     #Reward functions used from 
     def smart_building_reward(self, agent, world):
-        '''
-        reward = 0
-        
-        if self.occupied:
-            reward += self.comfort
-        
-        reward -= agent.energy
-        reward -= max(self.load, 0)
-        '''
-        print(self.time//2)
+
         if self.occupation[self.time//2] == 1:
             reward = -self.energy_costs[self.time//2]* max(agent.energy, 0) - agent.comfort_coef*((self.peak - agent.energy)**2)
         else:
             reward = -self.energy_costs[self.time//2]* max(agent.energy, 0)
-        
+
+        reward -= abs(agent.energy-agent.prev_energy)*50
         if self.load>self.peak:
-            reward -5000
+            reward -= 5000
         else:
             reward +=  -self.load * 100
         return reward
 
     def charging_station_reward(self, agent, world):
-        '''
-        reward = 0
-        if agent.required == 0:
-            reward = 100 - agent.rate*10
-        else:
-            reward = -(agent.rate*2+(agent.required))
-        '''
+
         reward = -agent.energy - agent.confidence*((agent.required - agent.total)**2)
+        reward -= abs(agent.energy-agent.prev_energy)*50
         if self.load>self.peak:
-            reward -5000
+            reward -= 5000
         else:
             reward += - self.load * 100
         if self.time//2 >= self.car_time[0] and self.time//2 <= self.car_time[1]:
@@ -238,4 +242,30 @@ class Scenario(BaseScenario):
 
     def charging_stations(self, agent, world):
         return [agent for agent in world.agents if (agent.name == "Charging_Station")]
+    
+    '''
+    Rule-based methods for environment.
+    For future work, should either add custom policy or 
+
+    max - maximum amount of power is distributed evenly among agents
+    half - half of the max is distributed evenly among agents
+    min - the minimum amount of energy is distributed to agents
+    '''
+    def rule(self, agent, world):
+        if self.method == "max":
+            agent.energy = self.peak/len(world.agents)
+            self.load = self.peak
+        elif self.method =="half":
+            agent.energy = (self.peak/2)/len(world.agents)
+            self.load = self.peak/2 
+        elif self.method =="min":
+            self.load -= agent.energy
+            if agent.name == "Charging_Station":
+                agent.energy = agent.required/(self.car_time[1]-self.car_time[0])
+            elif agent.name =="Smart_Building":
+                agent.energy = agent.min
+            self.load += agent.energy
+        return([agent.energy, self.load])
+        
+
 

@@ -30,7 +30,7 @@ class Runner:
     def run(self):
         returns = []
         self.args.evaluate_rate=23
-        self.args.time_steps = 24*150
+        self.args.time_steps = 24*25
         for time_step in tqdm(range(self.args.time_steps)):
             print("Time")
             print(time_step)

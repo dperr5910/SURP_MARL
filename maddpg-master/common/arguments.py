@@ -33,6 +33,11 @@ def get_args():
     parser.add_argument("--evaluate-episode-len", type=int, default=100, help="length of episodes for evaluating")
     parser.add_argument("--evaluate", type=bool, default=False, help="whether to evaluate the model")
     parser.add_argument("--evaluate-rate", type=int, default=1000, help="how often to evaluate model")
+
+
+    #Custom Arguments for Smart Load Environment
+    parser.add_argument("--day-reward", type=bool, default=False, help="Whether the reward is by step or by episode" )
+    parser.add_argument("--method", type=str, default="main", help="Can choose either Main MARL or rule-based method")
     args = parser.parse_args()
 
     return args

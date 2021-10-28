@@ -37,6 +37,10 @@ def make_env(args):
     # load scenario from script
     scenario = scenarios.load(args.scenario_name + ".py").Scenario()
 
+    #applying flags that are specific to the Smart_Load Scenario
+    scenario.day_reward = args.day_reward
+    scenario.method = args.method
+
     # create world
     world = scenario.make_world()
     # create multiagent environment
