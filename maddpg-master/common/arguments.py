@@ -36,7 +36,7 @@ def get_args():
 
 
     #Custom Arguments for Smart Load Environment
-    parser.add_argument("--day-reward", type=bool, default=False, help="Whether the reward is by step or by episode" )
+    parser.add_argument("--day-reward", type=bool, default=True, help="Whether the reward is by step or by episode" )
     parser.add_argument("--method", type=str, default="main", help="Can choose either Main MARL or rule-based method")
     args = parser.parse_args()
 

@@ -29,14 +29,16 @@ class Runner:
 
     def run(self):
         returns = []
-        self.args.evaluate_rate=23
-        self.args.time_steps = 24*25
+        self.args.evaluate_rate=3
+        self.args.time_steps = 3*25
         for time_step in tqdm(range(self.args.time_steps)):
+            '''
             print("Time")
             print(time_step)
-            self.env.render()
+            '''
+            #self.env.render()
             # reset the environment
-            self.episode_limit = 20
+            self.episode_limit = 3
             if time_step % self.episode_limit == 0:
                 s = self.env.reset()
             u = []
@@ -51,10 +53,10 @@ class Runner:
                     actions.append(action)
             for i in range(self.args.n_agents, self.args.n_players):
                 actions.append([0, np.random.rand() * 2 - 1, 0, np.random.rand() * 2 - 1, 0])
-            self.env.render()
+            #self.env.render()
             #Calls the multi-agent environment for the next steps
             s_next, r, done, info = self.env.step(actions)
-            self.env.render()
+            #self.env.render()
             self.buffer.store_episode(s[:self.args.n_agents], u, r[:self.args.n_agents], s_next[:self.args.n_agents])
 
             #the next observation replaces the previous observation
@@ -72,6 +74,21 @@ class Runner:
                 plt.xlabel('episode * ' + str(self.args.evaluate_rate / self.episode_limit))
                 plt.ylabel('average returns')
                 plt.savefig(self.save_path + '/plt.png', format='png')
+
+                for count, i in enumerate(self.env.world.actions):
+                    plt.figure()
+                    plt.plot(i)
+                    plt.ylabel("Action")
+                    plt.xlabel("Time Step")
+                    label = ""
+                    if count == 0:
+                        label = "Smart Building"
+                    elif count == 1:
+                        label ="Charging Station"
+                    plt.title(label)
+                    plt.savefig(self.save_path + "/" + label + ".png", format ='png')
+                    plt.close()
+
             self.noise = max(0.05, self.noise - 0.0000005)
             self.epsilon = max(0.05, self.noise - 0.0000005)
             np.save(self.save_path + '/returns.pkl', returns)
@@ -84,7 +101,7 @@ class Runner:
             s = self.env.reset()
             rewards = 0
             for time_step in range(self.args.evaluate_episode_len):
-                self.env.render()
+                #self.env.render()
                 actions = []
                 with torch.no_grad():
                     for agent_id, agent in enumerate(self.agents):
@@ -96,5 +113,5 @@ class Runner:
                 rewards += r[0]
                 s = s_next
             returns.append(rewards)
-            print('Returns is', rewards)
+        print('Returns is', rewards)
         return sum(returns) / self.args.evaluate_episodes
