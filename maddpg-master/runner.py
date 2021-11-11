@@ -29,20 +29,18 @@ class Runner:
 
     def run(self):
         returns = []
-        self.args.evaluate_rate=3
-        self.args.time_steps = 3*25
+        self.args.evaluate_rate=3*30
+        self.args.time_steps = 3*5000
         for time_step in tqdm(range(self.args.time_steps)):
-            '''
-            print("Time")
-            print(time_step)
-            '''
             #self.env.render()
             # reset the environment
             self.episode_limit = 3
+            
+
             if time_step % self.episode_limit == 0:
                 s = self.env.reset()
             u = []
-
+            
             #Generation new actions based on observations
             actions = []
             with torch.no_grad():
@@ -76,8 +74,15 @@ class Runner:
                 plt.savefig(self.save_path + '/plt.png', format='png')
 
                 for count, i in enumerate(self.env.world.actions):
+                    p = 0
+                    q = 0
+                    u = []
+                    for j in range(1, len(i), 3):
+                        u.append(sum(i[j-1:j+2]))
+
+
                     plt.figure()
-                    plt.plot(i)
+                    plt.plot(u)
                     plt.ylabel("Action")
                     plt.xlabel("Time Step")
                     label = ""
@@ -96,6 +101,7 @@ class Runner:
 
     def evaluate(self):
         returns = []
+        self.args.evaluate_episode_len = 3
         for episode in range(self.args.evaluate_episodes):
             # reset the environment
             s = self.env.reset()
@@ -114,4 +120,5 @@ class Runner:
                 s = s_next
             returns.append(rewards)
         print('Returns is', rewards)
+        self.env.reset()
         return sum(returns) / self.args.evaluate_episodes

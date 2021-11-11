@@ -81,6 +81,7 @@ class Agent(Entity):
 # multi-agent world
 class World(object):
     def __init__(self):
+        self.time = 0
         # list of agents and entities (can change at execution-time!)
         self.agents = []
         self.landmarks = []
@@ -129,6 +130,8 @@ class World(object):
         # update agent state
         for agent in self.agents:
             self.update_agent_state(agent)
+        
+        self.time += 1
 
     # gather agent action forces
     def apply_action_force(self, p_force):

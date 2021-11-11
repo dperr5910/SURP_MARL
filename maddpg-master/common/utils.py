@@ -59,5 +59,6 @@ def make_env(args):
         action_shape.append(content.n)
     args.action_shape = action_shape[:args.n_agents]  # 每一维代表该agent的act维度
     args.high_action = 1
-    args.low_action = -1
+    #Was -1 but changed it to 0 to more closely match what it should be
+    args.low_action = 0
     return env, args

@@ -28,25 +28,19 @@ class Scenario(BaseScenario):
         world.dim_c = 1
         world.dim_p = 2
 
-        if self.method == "main":
-            world.collaborative = True
-        elif self.method == "individual":
-            world.collaborative = False
+        world.collaborative = True
 
-
-        self.energy_costs = [1,1,1,2,2,3,4,5,6,7,7,7,10,10,10,10,9,8,8,8,4,3,3,2,2]
         self.load = 0
-        self.peak = 5
-        self.comfort = 0
-        self.occupied = True
-        self.occupation = [0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0]
+        self.peak = 2
+        if self.method != "main":
+            self.peak = 2
         self.done = False
-        self.time = 0
-        self.car_time = (8,16)
-        self.day_reward = False
+        world.time = 0
+        self.day_reward = True
+        self.start_required = 2
         
         #Generate Agents
-        world.agents = [Agent() for i in range(2)]
+        world.agents = [Agent() for i in range(num_agents)]
 
         for i, agent in enumerate(world.agents):
             if i == 0:
@@ -82,40 +76,34 @@ class Scenario(BaseScenario):
 
     #reward method for calling. Deliberates to specific reward functions
     def reward(self, agent, world):
-        self.day_reward= True
         reward = 0
 
 
         if agent.name == "Smart_Building":
-            reward -= (agent.demands[self.time//2]-agent.energy)**2
-            
-            pass
-            #reward = self.smart_building_reward(agent, world)
+            reward -= (agent.demands[world.time-1]-agent.energy)**2
+            reward -= self.load**2
+            self.reward 
         elif agent.name == "Charging_Station":
+            if world.time-1 == 2 and agent.required > 0.33:
+                reward -= 50
             pass
-            #reward = self.charging_station_reward(agent, world)
 
-        reward -= self.load**2/2
         if (self.day_reward == False):
             return reward
-        elif(self.day_reward == True and self.time == 6):
-            print("reward")
-            print(self.total_reward)
+        elif(self.day_reward == True and world.time-1 == 2):
+            self.total_reward += reward
             tmp = self.total_reward
-            self.total_reward =0
             return tmp
         else:
-            print("d")
             self.total_reward += reward
             return 0
-        print("not reward")
-        return None
 
 
 
     def reset_world(self, world):
+        self.total_reward = 0
+        world.time = 0
         self.load = 0
-        self.time = 0
         self.comfort = 0
         self.done = False
         world.energy_costs = []
@@ -135,14 +123,14 @@ class Scenario(BaseScenario):
                 agent.comfort_coef = .5
                 pass
             elif agent.name == "Charging_Station":
-                agent.rates = [0,self.peak]
+                agent.rates = [i for i in range(self.peak)]
                 agent.prev_energy = 0
                 agent.total = 0
                 agent.energy = 0
                 agent.rate = 0
                 agent.occupied = True
                 #charging deadline. after deadline, penalty is severe over more time
-                agent.required = 72 #2
+                agent.required = 2 #2
                 agent.state.p_pos = np.array([-.0,0.2])
                 agent.color = np.array([0.8,0.5,0.8])
                 agent.agent_callback = None 
@@ -172,24 +160,13 @@ class Scenario(BaseScenario):
     Obs - should be returning multiple 
     '''
     def observation(self, agent, world):
-        self.time %= 6
         agent.prev_energy = agent.energy
-        self.time += 1
-        
         if (self.method != "main"):
             return self.rule(agent, world)
-        for landmark in world.landmarks:
-            if landmark.name == "Load":
-                #print(landmark.name)
-                landmark.size = max(.1,min((1/self.peak * self.load),1))
-                landmark.color = np.array([0.1+(self.load/self.peak/0.9), 1-(self.load/self.peak),0])
-                #landmark.color = np.array([1,0,0])
-            elif landmark.name == "comfort":
-                landmark.size = .2 #self.comfort + .1
 
         if agent.name == "Charging_Station":
             world.actions[0].append(agent.state.c)
-            agent.energy= agent.state.c[0]* agent.rates[-1]
+            agent.energy= .66 #agent.state.c[0]* self.peak
             agent.required -= agent.energy 
         elif agent.name  == "Smart_Building":
             world.actions[1].append(agent.state.c)
@@ -201,7 +178,7 @@ class Scenario(BaseScenario):
 
 
     def done(self,agent, world):
-        if world.time == 48:
+        if world.time == 3:
             return True
         else:
             return False
@@ -210,7 +187,7 @@ class Scenario(BaseScenario):
     #Reward functions used from 
     def smart_building_reward(self, agent, world):
 
-        if self.occupation[self.time//2] == 1:
+        if self.occupation[world.time-1] == 1:
             reward = -self.cost(world)* max(agent.energy, 0) - agent.comfort_coef*((self.peak - agent.energy)**2)
         else:
             reward = -self.cost(world)* max(agent.energy, 0)
@@ -230,7 +207,7 @@ class Scenario(BaseScenario):
             reward -= 5000
         else:
             reward += - self.load * 100
-        if self.time//2 >= self.car_time[0] and self.time//2 <= self.car_time[1]:
+        if world.time-1 >= self.car_time[0] and world.time-1 <= self.car_time[1]:
             return reward
         else:
             return 0
@@ -254,49 +231,55 @@ class Scenario(BaseScenario):
         if self.method == "max":
             self.no_sched(agent, world)
         elif self.method =="individual":
-            self.individual(world)
-        return [0,1]
+            self.individual(agent,world)
+        return [0,0]
 
     def no_sched(self,agent, world):
-        if self.time == 0:
-            if agent.name =="Charging_Station":
-                agent.energy = agent.rates[-1]
-            if agent.name =="Smart_Building":
-                agent.energy = agent.demands[self.time//2]
-        if self.time == 1:
-            if agent.name =="Charging_Station":
-                agent.energy = agent.rates[-1]
-            if agent.name =="Smart_Building":
-                agent.energy = agent.demands[self.time//2]
-        if self.time == 2:
-            if agent.name =="Charging_Station":
-                agent.energy = 0
-            if agent.name =="Smart_Building":
-                agent.energy = agent.demands[self.time//2]
+        for agent in world.agents:
+            if agent.name == "Charging_Station":
+                if world.time-1 != 2:
+                    agent.energy = agent.rates[-1]
+                    agent.required -= agent.energy
+                else:
+                    agent.energy = 0
+            if agent.name == "Smart_Building":
+                agent.energy = agent.demands[world.time-1]
+                
+
         self.load = 0
         for agent in world.agents:
             self.load += agent.energy
+
+        if world.time-1 == 0:
+            assert(self.load ==4)
+        elif world.time-1 == 1:
+            assert(self.load == 2)
+        elif world.time-1 == 2:
+            assert(self.load== 1)
     pass
 
 
 
-    def individual(self, world):
+    def individual(self,agent, world):
         for agent in world.agents:
-            if self.time == 0:
-                if agent.name =="Charging Station":
+            if world.time-1 == 0:
+                if agent.name =="Charging_Station":
                     agent.energy = 0.66
-                if agent.name =="Smart Building":
+                if agent.name =="Smart_Building":
                     agent.energy = 1.5
-            if self.time == 1:
-                if agent.name =="Charging Station":
+            if world.time-1 == 1:
+                if agent.name =="Charging_Station":
                     agent.energy = 0.66
-                if agent.name =="Smart Building":
+                if agent.name =="Smart_Building":
                     agent.energy = .5
-            if self.time == 2:
-                if agent.name =="Charging Station":
+            if world.time-1 == 2:
+                if agent.name =="Charging_Station":
                     agent.energy = 0.66
-                if agent.name =="Smart Building":
+                if agent.name =="Smart_Building":
                     agent.energy = 0.5
+        if agent.name == "Charging_Station":
+            agent.required-= agent.energy
+            print(agent.required)
         pass
 
     
@@ -315,6 +298,7 @@ class Scenario(BaseScenario):
         for agent in world.agents:
             load += agent.energy
         return load
+
         
 
 
