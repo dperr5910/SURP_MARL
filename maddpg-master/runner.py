@@ -30,7 +30,7 @@ class Runner:
     def run(self):
         returns = []
         self.args.evaluate_rate=3*30
-        self.args.time_steps = 3*5000
+        self.args.time_steps = 3*15000
         for time_step in tqdm(range(self.args.time_steps)):
             #self.env.render()
             # reset the environment
@@ -82,7 +82,7 @@ class Runner:
 
 
                     plt.figure()
-                    plt.plot(u)
+                    plt.plot(u[-100:])
                     plt.ylabel("Action")
                     plt.xlabel("Time Step")
                     label = ""

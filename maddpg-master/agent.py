@@ -10,6 +10,21 @@ class Agent:
         self.agent_id = agent_id
         self.policy = MADDPG(args, agent_id)
 
+
+
+
+    #providing a better select action method that can handle multiple different policies
+    def select_action_2(self, o, noise_rate, epsilon):
+        if np.random.uniform() > epsilon:
+            pass
+        else:
+            #print(self.args.high_action)
+            u = np.random.uniform(self.args.low_action, self.args.high_action, self.args.action_shape[self.agent_id])
+
+
+
+
+
     def select_action(self, o, noise_rate, epsilon):
         if np.random.uniform() < epsilon:
             #print(self.args.high_action)
