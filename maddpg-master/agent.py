@@ -14,6 +14,7 @@ class Agent:
 
 
     #providing a better select action method that can handle multiple different policies
+    #as of right now, policies input and output methods will need their own methods.
     def select_action_2(self, o, noise_rate, epsilon):
         if np.random.uniform() > epsilon:
             pass

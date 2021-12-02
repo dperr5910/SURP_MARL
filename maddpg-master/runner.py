@@ -30,7 +30,7 @@ class Runner:
     def run(self):
         returns = []
         self.args.evaluate_rate=3*30
-        self.args.time_steps = 3*15000
+        self.args.time_steps = 3*30000
         for time_step in tqdm(range(self.args.time_steps)):
             #self.env.render()
             # reset the environment
@@ -92,7 +92,7 @@ class Runner:
                         label ="Charging Station"
                     plt.title(label)
                     plt.savefig(self.save_path + "/" + label + ".png", format ='png')
-                    plt.close()
+                    plt.close('all')
 
             self.noise = max(0.05, self.noise - 0.0000005)
             self.epsilon = max(0.05, self.noise - 0.0000005)

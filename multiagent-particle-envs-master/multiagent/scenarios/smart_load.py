@@ -96,7 +96,7 @@ class Scenario(BaseScenario):
             '''
             pass
             
-        reward -= agent.energy**2
+        reward -= ((self.load**2)/2)
 
         if (self.day_reward == False):
             return reward
@@ -193,7 +193,7 @@ class Scenario(BaseScenario):
             agent.energy = agent.state.c[0] * agent.demands[world.time-1]
 
         self.load = self.new_load(world)
-        return([agent.energy])
+        return([self.load])
 
 
 
